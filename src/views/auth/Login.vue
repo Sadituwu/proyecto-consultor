@@ -41,6 +41,10 @@ async function handleLogin() {
   }
 }
 
+function handleGoogleLogin() {
+  window.location.href = `${import.meta.env.VITE_API_URL}/auth/google`
+}
+
 </script>
 
 <template>
@@ -64,22 +68,10 @@ async function handleLogin() {
           <p class="el-text el-text--info" style="font-size: 0.85rem">Accede a tu cuenta</p>
         </div>
         <el-form @submit.prevent="handleLogin" class="login-form">
-          <el-form-item>
-            <el-input v-model="username" placeholder="Usuario" :prefix-icon="Message" size="large" />
-          </el-form-item>
-          <el-form-item>
-            <el-input v-model="password" type="password" placeholder="Contraseña" :prefix-icon="Lock" size="large"
-              show-password />
-          </el-form-item>
-          <el-button type="primary" native-type="submit" size="large" :loading="isLoggingIn" class="btn-login">
-            Ingresar 
-          </el-button>
-
           <el-button size="large" class="btn-google" @click="handleGoogleLogin">
             <img src="@/assets/logos-login/google.png" alt="Google" class="google-icon" />
             Ingresar con Google
           </el-button>
-          <p class="el-text el-text--info">¿No tienes cuenta? <a href="/registro" class="el-link">Regístrate aquí</a></p>
         </el-form>
       </el-card>
     </div>

@@ -1,10 +1,9 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { User, SwitchButton, Moon, Sunny, WarningFilled } from '@element-plus/icons-vue'
+import { User, SwitchButton, Moon, Sunny } from '@element-plus/icons-vue'
 import { useDarkMode } from "@/composables/useDarkMode"
 import { ElMessage } from 'element-plus'
-import api from '@/services/axios'
 
 const router = useRouter()
 
@@ -14,16 +13,17 @@ const { isDark, toggleDarkMode } = useDarkMode()
 const logoutDialogVisible = ref(false)
 const isLoggingOut = ref(false)
 
+const rolLabel = computed(() => {
+  const roles = { 1: '(Admin)', 2: '(Mentor)', 3: '(Estudiante)' }
+  return roles[user.rol] ?? user.rol
+})
+
 async function logout() {
   isLoggingOut.value = true
-
   localStorage.clear()
-
   ElMessage.success('Sesión cerrada exitosamente')
-
   isLoggingOut.value = false
   logoutDialogVisible.value = false
-
   router.push({ name: 'Login' })
 }
 
@@ -32,7 +32,7 @@ function showLogoutDialog() {
 }
 
 function cancelLogout() {
-  logoutDialogVisible.value = false 
+  logoutDialogVisible.value = false
 }
 
 function handleCommand(command) {
@@ -45,7 +45,6 @@ function handleCommand(command) {
       break
   }
 }
-
 </script>
 
 <template>
@@ -55,15 +54,20 @@ function handleCommand(command) {
         <el-icon class="mr-1">
           <User />
         </el-icon>
-        {{ user.rol }}
+        {{ user.nombre }} - {{ rolLabel }}
       </span>
 
       <template #dropdown>
         <el-dropdown-menu>
           <el-dropdown-item divided>
             <div class="flex items-center gap-2">
-              <el-switch v-model="isDark" inline-prompt :active-icon="Moon" :inactive-icon="Sunny"
-                @change="toggleDarkMode" />
+              <el-switch
+                v-model="isDark"
+                inline-prompt
+                :active-icon="Moon"
+                :inactive-icon="Sunny"
+                @change="toggleDarkMode"
+              />
               <span>Modo noche</span>
             </div>
           </el-dropdown-item>
@@ -78,11 +82,16 @@ function handleCommand(command) {
       </template>
     </el-dropdown>
 
-    <el-dialog v-model="logoutDialogVisible" width="450px" align-center :close-on-click-modal="false"
-      :close-on-press-escape="false">
+    <el-dialog
+      v-model="logoutDialogVisible"
+      width="450px"
+      align-center
+      :close-on-click-modal="false"
+      :close-on-press-escape="false"
+    >
       <div class="text-center py-4">
         <div class="flex justify-center mb-4">
-          <img src="@/assets/sistema/logo-dashboard.png" alt="Logout-claro" class="w-[180px] mx-auto" />
+          <img src="@/assets/sistema/logo-sidebar.png" alt="Logout-claro" class="w-[180px] mx-auto" />
         </div>
         <h2 class="text-xl font-bold mb-2" style="color: var(--el-text-color-primary)">
           ¿Seguro que deseas salir del sistema?

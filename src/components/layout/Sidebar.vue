@@ -69,8 +69,8 @@ onMounted(() => {
     class="transition-all duration-300 bg-[var(--el-bg-color)]">
     <div class="p-3 flex items-center gap-3">
       <div v-show="!isCollapsed" class="flex-1 text-center">
-        <router-link to="/modelo">
-          <img src="@/assets/sistema/logo-dashboard.png" alt="Logo-CLaro" class="w-[180px] mx-auto" />
+        <router-link to="/dashboard">
+          <img src="@/assets/sistema/logo-sidebar.png" alt="Logo-mentoria" class="w-[180px] mx-auto" />
         </router-link>
       </div>
       <el-button @click="isCollapsed = !isCollapsed" :class="isCollapsed ? 'rotate-180' : ''" :icon="DArrowLeft" />

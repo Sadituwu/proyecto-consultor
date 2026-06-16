@@ -6,12 +6,14 @@ import GuestLayout from '@/layout/GuestLayout.vue'
 /* --- Vistas públicas --- */
 import Home from '@/views/Home.vue'
 import Login from '@/views/auth/Login.vue'
+import GoogleCallback from '@/views/auth/GoogleCallback.vue'
 
 /* --- Vistas privadas --- */
 
 import AuthLayout from '@/layout/AuthLayout.vue'
 import modeloias from '@/views/modelo/iaclaro.vue'
 import registro from '@/views/modelo/tablemodelo.vue'
+import Dashboard from '@/views/Dashboard.vue'
 import { pa } from 'element-plus/es/locale/index.mjs'
 
 
@@ -28,18 +30,22 @@ const routes = [
     },
 
     {
+        path: '/auth',
+        component: GuestLayout,
+        children: [
+            { path: 'callback', name: 'GoogleCallback', component: GoogleCallback },
+        ]
+    },
+
+    {
         path: '/',
         component: AuthLayout,
         children: [
             {
-                path: 'modelo',
-                name: 'Modelo',
-                component: modeloias,
-            },
-            {
-                path: 'registro',
-                name: 'Registro',
-                component: registro,
+                path: 'dashboard',
+                name: 'Dashboard',
+                component: Dashboard,
+                meta: { requiresAuth: true },
             },
         ],
     },

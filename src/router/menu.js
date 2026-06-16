@@ -2,8 +2,8 @@ import { HomeFilled, Tickets, User, Setting, Avatar, FolderOpened, DataAnalysis 
 
 export const menuItems = [
 
-    { title: 'Modelo', icon: DataAnalysis , routeName: '/modelo', roles: ['admin', 'client', 'support'] },
-    { title: 'Registro', icon: List  , routeName: '/registro', roles: ['admin', 'client', 'support'] },
+    { title: 'Inicio', icon: DataAnalysis , routeName: '/modelo', roles: ['admin', 'client', 'support'] },
+    { title: 'Consultores', icon: List  , routeName: '/registro', roles: ['admin', 'client', 'support'] },
 
 ];
 
