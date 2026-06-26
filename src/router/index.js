@@ -53,7 +53,7 @@ const routes = [
     // Ruta global para cualquier URL inválida
     {
         path: '/:pathMatch(.*)*',
-        redirect: '/modelo'
+        redirect: '/dashboard'
     }
 ] 
 
@@ -70,7 +70,7 @@ router.beforeEach((to, from, next) => {
 
     // Si ya está logeado, no acceder a páginas públicas
     if (to.meta.guestOnly && token) {
-        return next({ name: 'Modelo' });
+        return next({ name: 'Dashboard' });
     }
 
     // Si la ruta privada no tiene token → login
