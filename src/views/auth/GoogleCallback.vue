@@ -28,7 +28,13 @@ onMounted(async () => {
   try {
     const res = await api.get('/usuario')
     localStorage.setItem('user', JSON.stringify(res.data))
-    router.replace({ name: 'Dashboard' }) // → dashboard interno
+
+    const isNew = route.query.is_new === '1'
+    if (isNew) {
+      router.replace({ name: 'SeleccionarRol' })
+    } else {
+      router.replace({ name: 'Dashboard' })
+    }
   } catch (error) {
     console.error(error)
     localStorage.removeItem('access_token')

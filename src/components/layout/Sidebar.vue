@@ -24,7 +24,8 @@ window.addEventListener('resize', updateIsMobile)
 const user = JSON.parse(localStorage.getItem('user') || '{}')
 
 const filteredMenu = computed(() => {
-  return menuItems.filter(item => item.roles.includes(user?.rol) || 'guest')
+  const rol = user?.rol ?? null
+  return menuItems.filter(item => rol !== null && item.roles.includes(rol))
 })
 
 const findActiveMenu = (currentPath) => {

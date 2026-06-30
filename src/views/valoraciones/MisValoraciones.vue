@@ -4,10 +4,12 @@ import api from '@/services/axios'
 import { ElMessage } from 'element-plus'
 import {
   Trophy, StarFilled, ChatDotSquare,
-  CircleCheck, Edit, Warning, Finished
+  CircleCheck, Edit, Warning, Finished, Medal
 } from '@element-plus/icons-vue'
+import { ROL } from '@/utils/roles'
 
-const user = JSON.parse(localStorage.getItem('user') || '{}')
+const user     = JSON.parse(localStorage.getItem('user') || '{}')
+const esMentor = user.rol === ROL.MENTOR
 
 // ── Estado ─────────────────────────────────────────────────────────────
 const loadingSesiones    = ref(false)
@@ -87,6 +89,30 @@ const listaMostrada = computed(() =>
 
 const labelCalificacion = computed(() => ratingLabels[form.calificacion] || '')
 const colorCalificacion = computed(() => ratingColors[form.calificacion] || '#c6d1de')
+
+// ── Vista Mentor: valoraciones recibidas ──────────────────────────────
+const valoracionesRecibidas = computed(() =>
+  valoraciones.value.filter(v => v.mentor_id === user.id)
+)
+
+const sesionesMap = computed(() => {
+  const map = {}
+  sesiones.value.forEach(s => { map[s.id] = s })
+  return map
+})
+
+const promedioCalificacion = computed(() => {
+  const lista = valoracionesRecibidas.value
+  if (!lista.length) return 0
+  const suma = lista.reduce((acc, v) => acc + v.calificacion, 0)
+  return (suma / lista.length).toFixed(1)
+})
+
+const distribucion = computed(() => {
+  const dist = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 }
+  valoracionesRecibidas.value.forEach(v => { dist[v.calificacion]++ })
+  return dist
+})
 
 // ── Carga de datos ─────────────────────────────────────────────────────
 async function cargarSesiones() {
@@ -212,15 +238,17 @@ onMounted(() => Promise.all([cargarSesiones(), cargarValoraciones(), cargarMento
       <div>
         <h1 class="valoraciones-title">
           <el-icon><Trophy /></el-icon>
-          Mis Valoraciones
+          {{ esMentor ? 'Mi Reputación' : 'Mis Valoraciones' }}
         </h1>
         <p class="valoraciones-subtitle">
-          Califica las sesiones de mentoría que has completado
+          {{ esMentor
+            ? 'Valoraciones y comentarios que los aprendices han dejado sobre tus mentorías'
+            : 'Califica las sesiones de mentoría que has completado' }}
         </p>
       </div>
 
-      <!-- Resumen rápido -->
-      <div class="valoraciones-resumen">
+      <!-- Resumen: Aprendiz -->
+      <div v-if="!esMentor" class="valoraciones-resumen">
         <div class="resumen-item">
           <span class="resumen-num resumen-num--warning">{{ sesionesPendientes.length }}</span>
           <span class="resumen-label">Por valorar</span>
@@ -231,7 +259,120 @@ onMounted(() => Promise.all([cargarSesiones(), cargarValoraciones(), cargarMento
           <span class="resumen-label">Valoradas</span>
         </div>
       </div>
+
+      <!-- Resumen: Mentor -->
+      <div v-else class="valoraciones-resumen">
+        <div class="resumen-item">
+          <span class="resumen-num" style="color: #f7ba2a">{{ promedioCalificacion }}</span>
+          <span class="resumen-label">Promedio</span>
+        </div>
+        <div class="resumen-divider" />
+        <div class="resumen-item">
+          <span class="resumen-num resumen-num--success">{{ valoracionesRecibidas.length }}</span>
+          <span class="resumen-label">Valoraciones</span>
+        </div>
+      </div>
     </div>
+
+    <!-- ══ VISTA MENTOR ═══════════════════════════════════════════════════ -->
+    <template v-if="esMentor">
+
+      <!-- Promedio general -->
+      <el-card v-if="valoracionesRecibidas.length" shadow="never" class="mentor-promedio-card">
+        <div class="mentor-promedio">
+          <div class="mentor-promedio__score">
+            <span class="score-numero">{{ promedioCalificacion }}</span>
+            <el-rate :model-value="Number(promedioCalificacion)" disabled allow-half />
+            <span class="score-total">de {{ valoracionesRecibidas.length }} valoraciones</span>
+          </div>
+          <div class="mentor-distribucion">
+            <div
+              v-for="estrellas in [5,4,3,2,1]"
+              :key="estrellas"
+              class="dist-row"
+            >
+              <span class="dist-label">{{ estrellas }} ★</span>
+              <div class="dist-barra">
+                <div
+                  class="dist-barra__fill"
+                  :style="{
+                    width: valoracionesRecibidas.length
+                      ? (distribucion[estrellas] / valoracionesRecibidas.length * 100) + '%'
+                      : '0%',
+                    background: ratingColors[estrellas]
+                  }"
+                />
+              </div>
+              <span class="dist-count">{{ distribucion[estrellas] }}</span>
+            </div>
+          </div>
+        </div>
+      </el-card>
+
+      <!-- Loading -->
+      <div v-if="loadingValoraciones" class="lista">
+        <el-card v-for="i in 3" :key="i" shadow="never" class="sesion-card">
+          <el-skeleton :rows="2" animated />
+        </el-card>
+      </div>
+
+      <!-- Sin valoraciones -->
+      <div v-else-if="!valoracionesRecibidas.length" class="empty-state">
+        <el-empty :image-size="120">
+          <template #description>
+            <p class="empty-title">Aún no tienes valoraciones</p>
+            <p class="empty-subtitle">
+              Cuando completes sesiones con aprendices y ellos las califiquen, aparecerán aquí.
+            </p>
+          </template>
+        </el-empty>
+      </div>
+
+      <!-- Lista de valoraciones recibidas -->
+      <div v-else class="lista">
+        <el-card
+          v-for="v in valoracionesRecibidas"
+          :key="v.id"
+          shadow="never"
+          class="sesion-card sesion-card--valorada"
+        >
+          <div class="sesion-card__body">
+            <el-avatar :size="48" class="sesion-avatar">
+              A
+            </el-avatar>
+
+            <div class="sesion-info">
+              <p class="sesion-mentor">Aprendiz</p>
+              <div class="sesion-meta" v-if="sesionesMap[v.sesion_id]">
+                <span>{{ formatFecha(sesionesMap[v.sesion_id]?.fecha) }}</span>
+                <span class="meta-sep">·</span>
+                <span>
+                  {{ formatHora(sesionesMap[v.sesion_id]?.hora_inicio) }}
+                  – {{ formatHora(sesionesMap[v.sesion_id]?.hora_fin) }}
+                </span>
+              </div>
+            </div>
+
+            <div class="valoracion-resultado">
+              <el-rate
+                :model-value="v.calificacion"
+                disabled
+                :colors="['#f7ba2a', '#f7ba2a', '#ff9900']"
+              />
+              <span class="valoracion-label">{{ ratingLabels[v.calificacion] }}</span>
+              <p v-if="v.comentario" class="valoracion-comentario">
+                <el-icon><ChatDotSquare /></el-icon>
+                {{ v.comentario }}
+              </p>
+            </div>
+          </div>
+        </el-card>
+      </div>
+
+    </template>
+
+    <!-- ══ VISTA APRENDIZ ════════════════════════════════════════════════ -->
+    <template v-if="!esMentor">
 
     <!-- ══ TABS ══════════════════════════════════════════════════════════ -->
     <div class="tabs-filtro">
@@ -382,6 +523,8 @@ onMounted(() => Promise.all([cargarSesiones(), cargarValoraciones(), cargarMento
       </template>
 
     </div>
+
+    </template><!-- fin vista aprendiz -->
 
     <!-- ══ DIÁLOGO DE VALORACIÓN ══════════════════════════════════════════ -->
     <el-dialog
@@ -809,10 +952,85 @@ onMounted(() => Promise.all([cargarSesiones(), cargarValoraciones(), cargarMento
 .fade-enter-from,
 .fade-leave-to     { opacity: 0; transform: translateY(-4px); }
 
+/* ── Vista Mentor: promedio ──────────────────────────────────────────── */
+.mentor-promedio-card {
+  border-radius: 14px !important;
+  margin-bottom: 1.25rem;
+}
+
+.mentor-promedio {
+  display: flex;
+  gap: 2.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.mentor-promedio__score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 120px;
+}
+
+.score-numero {
+  font-size: 3rem;
+  font-weight: 800;
+  color: #f7ba2a;
+  line-height: 1;
+}
+
+.score-total {
+  font-size: 0.75rem;
+  color: var(--el-text-color-secondary);
+}
+
+.mentor-distribucion {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 200px;
+}
+
+.dist-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dist-label {
+  font-size: 0.75rem;
+  color: var(--el-text-color-secondary);
+  min-width: 28px;
+  text-align: right;
+}
+
+.dist-barra {
+  flex: 1;
+  height: 8px;
+  background: var(--el-fill-color);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.dist-barra__fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+
+.dist-count {
+  font-size: 0.72rem;
+  color: var(--el-text-color-secondary);
+  min-width: 16px;
+}
+
 @media (max-width: 600px) {
   .valoraciones-page { padding: 1rem; }
   .sesion-card__body { flex-direction: column; align-items: flex-start; }
   .sesion-accion,
   .valoracion-resultado { align-items: flex-start; }
+  .mentor-promedio { flex-direction: column; gap: 1rem; }
 }
 </style>

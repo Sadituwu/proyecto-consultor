@@ -1,50 +1,11 @@
 <script setup>
-import api from '@/services/axios'
 import bg from '@/assets/logos-login/login-mentoria.jpg'
-import { useRouter, useRoute } from 'vue-router'
-import { ref, onMounted } from 'vue'
-import { Message, Lock } from '@element-plus/icons-vue'
-import axios from 'axios'
-import { ElMessage } from 'element-plus'
 
 document.title = 'Iniciar Sesión'
-
-const username = ref('')
-const password = ref('')
-const isLoggingIn = ref(false)
-const router = useRouter()
-const route = useRoute()
-
-async function handleLogin() {
-  if (isLoggingIn.value) return
-
-  isLoggingIn.value = true
-
-  try {
-    const res = await api.post('/login', {
-      username: username.value,
-      password: password.value
-    })
-
-    console.log(res.data)
-
-    localStorage.setItem('user', JSON.stringify(res.data))
-
-    router.push({ name: 'Dashboard' })
-
-  } catch (error) {
-    console.error(error)
-
-    ElMessage.error('Credenciales incorrectas.')
-  } finally {
-    isLoggingIn.value = false
-  }
-}
 
 function handleGoogleLogin() {
   window.location.href = `${import.meta.env.VITE_BACKEND_URL}/auth/google`
 }
-
 </script>
 
 <template>
@@ -67,7 +28,7 @@ function handleGoogleLogin() {
           <h2 class="el-text is-bold" style="font-size: 1.4rem">Bienvenido</h2>
           <p class="el-text el-text--info" style="font-size: 0.85rem">Accede a tu cuenta</p>
         </div>
-        <el-form @submit.prevent="handleLogin" class="login-form">
+        <el-form class="login-form">
           <el-button size="large" class="btn-google" @click="handleGoogleLogin">
             <img src="@/assets/logos-login/google.png" alt="Google" class="google-icon" />
             Ingresar con Google

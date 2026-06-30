@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { User, SwitchButton, Moon, Sunny, Avatar } from '@element-plus/icons-vue'
 import { useDarkMode } from "@/composables/useDarkMode"
 import { ElMessage } from 'element-plus'
+import { ROL_LABEL } from '@/utils/roles'
 
 const router = useRouter()
 
@@ -13,10 +14,7 @@ const { isDark, toggleDarkMode } = useDarkMode()
 const logoutDialogVisible = ref(false)
 const isLoggingOut = ref(false)
 
-const rolLabel = computed(() => {
-  const roles = { 1: '(Admin)', 2: '(Mentor)', 3: '(Estudiante)' }
-  return roles[user.rol] ?? user.rol
-})
+const rolLabel = computed(() => ROL_LABEL[user.rol] ?? 'Usuario')
 
 async function logout() {
   isLoggingOut.value = true

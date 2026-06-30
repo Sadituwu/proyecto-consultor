@@ -1,13 +1,43 @@
-import { HomeFilled, Tickets, User, Setting, Avatar, FolderOpened, DataAnalysis, List, Medal, Calendar, Trophy } from '@element-plus/icons-vue'
+import { DataAnalysis, Avatar, Medal, Calendar, Trophy, User } from '@element-plus/icons-vue'
+import { ROL } from '@/utils/roles'
 
 export const menuItems = [
+  {
+    title:     'Inicio',
+    icon:      DataAnalysis,
+    routeName: '/dashboard',
+    roles:     [ROL.APRENDIZ, ROL.MENTOR, ROL.ADMIN],
+  },
+  {
+    title:     'Mi Perfil',
+    icon:      Avatar,
+    routeName: '/perfil',
+    roles:     [ROL.APRENDIZ, ROL.MENTOR, ROL.ADMIN],
+  },
+  {
+    title:     'Buscar Mentores',
+    icon:      Medal,
+    routeName: '/mentores',
+    roles:     [ROL.APRENDIZ, ROL.ADMIN],
+  },
+  {
+    title:     'Mis Sesiones',
+    icon:      Calendar,
+    routeName: '/sesiones',
+    roles:     [ROL.APRENDIZ, ROL.MENTOR, ROL.ADMIN],
+  },
+  {
+    title:     'Mis Valoraciones',
+    icon:      Trophy,
+    routeName: '/valoraciones',
+    roles:     [ROL.APRENDIZ, ROL.MENTOR, ROL.ADMIN],
+  },
+  {
+    title:     'Usuarios',
+    icon:      User,
+    routeName: '/usuarios',
+    roles:     [ROL.ADMIN],
+  },
+]
 
-    { title: 'Inicio',           icon: DataAnalysis, routeName: '/dashboard',    roles: ['admin', 'client', 'support'] },
-    { title: 'Mi Perfil',        icon: Avatar,       routeName: '/perfil',       roles: ['admin', 'client', 'support'] },
-    { title: 'Buscar Mentores',  icon: Medal,        routeName: '/mentores',     roles: ['admin', 'client', 'support'] },
-    { title: 'Mis Sesiones',     icon: Calendar,     routeName: '/sesiones',     roles: ['admin', 'client', 'support'] },
-    { title: 'Mis Valoraciones', icon: Trophy,       routeName: '/valoraciones', roles: ['admin', 'client', 'support'] },
-
-];
-
-export default menuItems;
+export default menuItems

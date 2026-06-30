@@ -6,8 +6,10 @@ import {
   UserFilled, Edit, Picture, Reading,
   Timer, StarFilled, Check
 } from '@element-plus/icons-vue'
+import { ROL } from '@/utils/roles'
 
 const user = JSON.parse(localStorage.getItem('user') || '{}')
+const esEstudiante = user.rol === ROL.APRENDIZ
 
 const formRef = ref(null)
 const loading = ref(false)
@@ -230,8 +232,8 @@ function limpiarFormulario() {
             </el-form-item>
           </el-card>
 
-          <!-- ── Disponibilidad ────────────────────────────────────── -->
-          <el-card shadow="never" class="perfil-card">
+          <!-- ── Disponibilidad (solo mentores) ──────────────────── -->
+          <el-card v-if="!esEstudiante" shadow="never" class="perfil-card">
             <template #header>
               <div class="card-header">
                 <el-icon>
@@ -247,7 +249,9 @@ function limpiarFormulario() {
                   {{ op }}
                 </el-checkbox>
               </el-checkbox-group>
-              <div class="field-hint">Selecciona los horarios en que puedes mentorear</div>
+              <div class="field-hint">
+                {{ esEstudiante ? 'Selecciona los horarios en que puedes recibir mentoría' : 'Selecciona los horarios en que puedes mentorear' }}
+              </div>
             </el-form-item>
           </el-card>
 
@@ -295,14 +299,21 @@ function limpiarFormulario() {
               </div>
             </template>
 
-            <el-form-item label="Cuéntanos sobre ti, tu experiencia y objetivos" prop="bio">
+            <el-form-item
+              :label="esEstudiante ? '¿Qué quieres aprender? ¿Cuáles son tus metas?' : 'Cuéntanos sobre ti, tu experiencia y objetivos'"
+              prop="bio"
+            >
               <el-input v-model="form.bio" type="textarea" :rows="5" :maxlength="500"
-                placeholder="Ej: Estudiante de 5to ciclo apasionado por el desarrollo web. Tengo experiencia en proyectos universitarios con Vue.js y Laravel. Busco mentoría para mejorar en arquitectura de software..."
+                :placeholder="esEstudiante
+                  ? 'Ej: Soy estudiante de 3er ciclo y quiero aprender desarrollo web. Me interesa mejorar en Vue.js y bases de datos. Busco un mentor que me guíe en proyectos reales...'
+                  : 'Ej: Estudiante de 5to ciclo con experiencia en proyectos universitarios con Vue.js y Laravel. Puedo ayudarte a mejorar en arquitectura de software...'"
                 resize="none" />
               <div class="bio-counter" :style="{ color: bioColor }">
                 {{ bioContador }}
               </div>
-              <div class="field-hint">Incluye tu experiencia, logros y qué esperas de la mentoría</div>
+              <div class="field-hint">
+                {{ esEstudiante ? 'Describe tus objetivos de aprendizaje y qué esperas de tu mentor' : 'Incluye tu experiencia, logros y en qué puedes ayudar a otros' }}
+              </div>
             </el-form-item>
           </el-card>
 
@@ -313,11 +324,11 @@ function limpiarFormulario() {
                 <el-icon>
                   <StarFilled />
                 </el-icon>
-                <span>Especialidades y habilidades</span>
+                <span>{{ esEstudiante ? 'Áreas de interés' : 'Especialidades y habilidades' }}</span>
               </div>
             </template>
 
-            <el-form-item label="Agrega tus tecnologías y áreas de conocimiento" prop="habilidades">
+            <el-form-item :label="esEstudiante ? 'Agrega las tecnologías o temas que te interesan aprender' : 'Agrega tus tecnologías y áreas de conocimiento'" prop="habilidades">
               <el-select v-model="form.habilidades" multiple filterable allow-create default-first-option
                 placeholder="Escribe o selecciona una habilidad y presiona Enter" class="w-full">
                 <el-option v-for="h in habilidadesSugeridas" :key="h" :label="h" :value="h" />

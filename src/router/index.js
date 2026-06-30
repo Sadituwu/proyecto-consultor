@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { ROL } from '@/utils/roles'
 
 /*----  Guest públicas ---*/
 import GuestLayout from '@/layout/GuestLayout.vue'
@@ -7,6 +8,7 @@ import GuestLayout from '@/layout/GuestLayout.vue'
 import Home from '@/views/Home.vue'
 import Login from '@/views/auth/Login.vue'
 import GoogleCallback from '@/views/auth/GoogleCallback.vue'
+import SeleccionarRol from '@/views/auth/SeleccionarRol.vue'
 
 /* --- Vistas privadas --- */
 
@@ -36,6 +38,7 @@ const routes = [
         component: GuestLayout,
         children: [
             { path: 'callback', name: 'GoogleCallback', component: GoogleCallback },
+            { path: 'seleccionar-rol', name: 'SeleccionarRol', component: SeleccionarRol },
         ]
     },
 
@@ -48,38 +51,36 @@ const routes = [
                 name: 'Dashboard',
                 component: Dashboard,
                 meta: { requiresAuth: true },
-                roles: ['admin', 'client', 'support']
             },
             {
                 path: 'usuarios',
                 name: 'TableUsuarios',
                 component: tableUsuarios,
-                meta: { requiresAuth: true },
-                roles: ['admin', 'client', 'support']
+                meta: { requiresAuth: true, roles: [ROL.ADMIN] },
             },
             {
                 path: 'perfil',
                 name: 'UserPerfil',
                 component: FormPerfil,
-                meta: { requiresAuth: true }
+                meta: { requiresAuth: true },
             },
             {
                 path: 'mentores',
                 name: 'BuscarMentores',
                 component: BuscarMentores,
-                meta: { requiresAuth: true }
+                meta: { requiresAuth: true, roles: [ROL.APRENDIZ, ROL.ADMIN] },
             },
             {
                 path: 'sesiones',
                 name: 'MisSesiones',
                 component: MisSesiones,
-                meta: { requiresAuth: true }
+                meta: { requiresAuth: true },
             },
             {
                 path: 'valoraciones',
                 name: 'MisValoraciones',
                 component: MisValoraciones,
-                meta: { requiresAuth: true }
+                meta: { requiresAuth: true, roles: [ROL.APRENDIZ, ROL.MENTOR, ROL.ADMIN] },
             },
         ],
     },
@@ -114,9 +115,8 @@ router.beforeEach((to, from, next) => {
 
     // Validación de roles
     if (to.meta.roles && user) {
-        const hasRole = to.meta.roles.includes(user.role);
-        if (!hasRole) {
-            return next({ name: 'NotFound' });
+        if (!to.meta.roles.includes(user.rol)) {
+            return next({ name: 'Dashboard' })
         }
     }
 

@@ -5,12 +5,16 @@ import api from '@/services/axios'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Calendar, Clock, Plus, WarningFilled,
-  CircleCheck, CircleClose, Tickets, Edit, InfoFilled
+  CircleCheck, CircleClose, Tickets, Edit, InfoFilled, Checked, Finished
 } from '@element-plus/icons-vue'
+import { ROL } from '@/utils/roles'
 
 const route  = useRoute()
 const router = useRouter()
 const user   = JSON.parse(localStorage.getItem('user') || '{}')
+
+const esMentor   = computed(() => user.rol === ROL.MENTOR)
+const esEstudiante = computed(() => user.rol === ROL.APRENDIZ)
 
 // ── Estado ─────────────────────────────────────────────────────────────
 const loadingSesiones  = ref(false)
@@ -255,11 +259,68 @@ function getTagIcon(estado) {
 }
 
 function puedeCancel(sesion) {
-  return ['pendiente', 'confirmada'].includes(sesion.estado) && sesion.aprendiz_id === user.id
+  return ['pendiente', 'confirmada'].includes(sesion.estado) &&
+    (sesion.aprendiz_id === user.id || sesion.mentor_id === user.id)
+}
+
+function puedeConfirmar(sesion) {
+  return sesion.estado === 'pendiente' && sesion.mentor_id === user.id
+}
+
+function puedeCompletar(sesion) {
+  return sesion.estado === 'confirmada' && sesion.mentor_id === user.id
 }
 
 function esMiSesionComoMentor(sesion) {
   return sesion.mentor_id === user.id
+}
+
+async function completarSesion(sesion) {
+  try {
+    await ElMessageBox.confirm(
+      `¿Confirmas que la sesión del ${formatFecha(sesion.fecha)} a las ${formatHora(sesion.hora_inicio)} ya se realizó?`,
+      'Marcar como completada',
+      {
+        confirmButtonText: 'Sí, completar',
+        cancelButtonText: 'No',
+        type: 'success',
+      }
+    )
+  } catch {
+    return
+  }
+
+  try {
+    await api.put(`/sesiones/${sesion.id}/completar`)
+    ElMessage.success('Sesión marcada como completada — el aprendiz ya puede valorarla')
+    cargarSesiones()
+  } catch (err) {
+    ElMessage.error(err.response?.data?.mensaje || 'No se pudo completar la sesión')
+  }
+}
+
+async function confirmarSesion(sesion) {
+  try {
+    await ElMessageBox.confirm(
+      `¿Confirmas la sesión del ${formatFecha(sesion.fecha)} a las ${formatHora(sesion.hora_inicio)}?`,
+      'Confirmar sesión',
+      {
+        confirmButtonText: 'Sí, confirmar',
+        cancelButtonText: 'No',
+        type: 'success',
+      }
+    )
+  } catch {
+    return
+  }
+
+  try {
+    await api.put(`/sesiones/${sesion.id}/confirmar`)
+    ElMessage.success('Sesión confirmada')
+    cargarSesiones()
+  } catch (err) {
+    ElMessage.error(err.response?.data?.mensaje || 'No se pudo confirmar la sesión')
+  }
 }
 
 onMounted(async () => {
@@ -279,12 +340,16 @@ onMounted(async () => {
       <div>
         <h1 class="sesiones-title">
           <el-icon><Calendar /></el-icon>
-          Mis Sesiones
+          {{ esMentor ? 'Solicitudes de Mentoría' : 'Mis Sesiones' }}
         </h1>
-        <p class="sesiones-subtitle">Gestiona tus sesiones de mentoría agendadas</p>
+        <p class="sesiones-subtitle">
+          {{ esMentor
+            ? 'Gestiona las solicitudes de sesión que recibes de los aprendices'
+            : 'Gestiona tus sesiones de mentoría agendadas' }}
+        </p>
       </div>
 
-      <el-button type="primary" :icon="Plus" size="large" @click="abrirDialogo">
+      <el-button v-if="esEstudiante" type="primary" :icon="Plus" size="large" @click="abrirDialogo">
         Agendar sesión
       </el-button>
     </div>
@@ -315,15 +380,17 @@ onMounted(async () => {
       <el-empty :image-size="120">
         <template #description>
           <p class="empty-title">
-            {{ filtroEstado === 'todas' ? 'No tienes sesiones aún' : `Sin sesiones ${filtroEstado}s` }}
+            {{ esMentor
+              ? (filtroEstado === 'todas' ? 'No tienes solicitudes aún' : `Sin solicitudes ${filtroEstado}s`)
+              : (filtroEstado === 'todas' ? 'No tienes sesiones aún' : `Sin sesiones ${filtroEstado}s`) }}
           </p>
           <p class="empty-subtitle">
-            {{ filtroEstado === 'todas'
-              ? 'Agenda tu primera sesión con un mentor.'
-              : 'Cambia el filtro o agenda una nueva sesión.' }}
+            {{ esMentor
+              ? 'Los aprendices podrán encontrarte en Buscar Mentores y enviarte solicitudes.'
+              : (filtroEstado === 'todas' ? 'Agenda tu primera sesión con un mentor.' : 'Cambia el filtro o agenda una nueva sesión.') }}
           </p>
         </template>
-        <el-button type="primary" :icon="Plus" @click="abrirDialogo">
+        <el-button v-if="esEstudiante" type="primary" :icon="Plus" @click="abrirDialogo">
           Agendar sesión
         </el-button>
       </el-empty>
@@ -380,6 +447,21 @@ onMounted(async () => {
             >
               {{ sesion.estado.charAt(0).toUpperCase() + sesion.estado.slice(1) }}
             </el-tag>
+            <el-tooltip
+              v-if="sesion.google_calendar_event_id"
+              content="Evento sincronizado con Google Calendar"
+              placement="top"
+            >
+              <span class="gcal-badge">
+                <img
+                  src="https://ssl.gstatic.com/calendar/images/dynamiclogo_2020q4/calendar_16_2x.png"
+                  alt="Google Calendar"
+                  width="14"
+                  height="14"
+                />
+                Google Calendar
+              </span>
+            </el-tooltip>
             <p v-if="sesion.observaciones" class="sesion-obs">
               {{ sesion.observaciones }}
             </p>
@@ -387,6 +469,37 @@ onMounted(async () => {
 
           <!-- Acciones -->
           <div class="sesion-acciones">
+
+            <el-tooltip
+              v-if="puedeCompletar(sesion)"
+              content="Marcar sesión como realizada"
+              placement="top"
+            >
+              <el-button
+                type="primary"
+                size="small"
+                :icon="Finished"
+                @click="completarSesion(sesion)"
+              >
+                Completar
+              </el-button>
+            </el-tooltip>
+
+            <el-tooltip
+              v-if="puedeConfirmar(sesion)"
+              content="Confirmar esta solicitud"
+              placement="top"
+            >
+              <el-button
+                type="success"
+                size="small"
+                :icon="CircleCheck"
+                @click="confirmarSesion(sesion)"
+              >
+                Confirmar
+              </el-button>
+            </el-tooltip>
+
             <el-tooltip
               v-if="puedeCancel(sesion)"
               content="Cancelar sesión"
@@ -402,6 +515,7 @@ onMounted(async () => {
                 Cancelar
               </el-button>
             </el-tooltip>
+
           </div>
 
         </div>
@@ -789,6 +903,20 @@ onMounted(async () => {
 .mentor-option__carrera {
   font-size: 0.75rem;
   color: var(--el-text-color-secondary);
+}
+
+/* ── Google Calendar badge ───────────────────────────────────────────── */
+.gcal-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  color: #1a73e8;
+  background: #e8f0fe;
+  border-radius: 6px;
+  padding: 0.2rem 0.5rem;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 @media (max-width: 500px) {
