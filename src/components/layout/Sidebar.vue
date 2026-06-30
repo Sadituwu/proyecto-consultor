@@ -19,7 +19,7 @@ const updateIsMobile = () => {
   isMobile.value = window.innerWidth <= 768
 }
 
-window.addEventListener('resize', updateIsMobile) 
+window.addEventListener('resize', updateIsMobile)
 
 const user = JSON.parse(localStorage.getItem('user') || '{}')
 
@@ -109,7 +109,7 @@ onMounted(() => {
     <div class="p-3 flex items-center gap-3">
       <div class="flex-1 text-center">
         <router-link to="/modelo" @click="drawerVisible = false">
-          <img src="@/assets/sistema/logo-dashboard.png" alt="Logo-CLaro" class="w-[180px] mx-auto" />
+          <img src="@/assets/sistema/logo-sidebar.png" alt="Logo-sidebar" class="w-[180px] mx-auto" />
         </router-link>
       </div>
       <el-button @click="drawerVisible = false" :icon="DArrowLeft" />
@@ -118,7 +118,7 @@ onMounted(() => {
       style="background-color: var(--el-bg-color); color: var(--el-text-color-regular);"
       active-text-color="var(--el-color-primary)" @select="(key) => { activeMenu = key; drawerVisible = false }">
       <template v-for="item in filteredMenu" :key="item.title">
-        <!-- SUBMENU EN MÓVIL --> 
+        <!-- SUBMENU EN MÓVIL -->
         <el-sub-menu v-if="item.children" :index="item.title">
           <template #title>
             <el-icon>

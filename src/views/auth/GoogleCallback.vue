@@ -26,7 +26,7 @@ onMounted(async () => {
   localStorage.setItem('access_token', token)
 
   try {
-    const res = await api.get('/api/usuario')
+    const res = await api.get('/usuario')
     localStorage.setItem('user', JSON.stringify(res.data))
     router.replace({ name: 'Dashboard' }) // → dashboard interno
   } catch (error) {

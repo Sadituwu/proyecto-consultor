@@ -14,7 +14,8 @@ import AuthLayout from '@/layout/AuthLayout.vue'
 import modeloias from '@/views/modelo/iaclaro.vue'
 import registro from '@/views/modelo/tablemodelo.vue'
 import Dashboard from '@/views/Dashboard.vue'
-import { pa } from 'element-plus/es/locale/index.mjs'
+import tableUsuarios from '@/views/administracion/tableUsuarios.vue'
+import FormPerfil from '@/views/perfil/FormPerfil.vue'
 
 
 
@@ -46,6 +47,20 @@ const routes = [
                 name: 'Dashboard',
                 component: Dashboard,
                 meta: { requiresAuth: true },
+                roles: ['admin', 'client', 'support']
+            },
+            {
+                path: 'usuarios',
+                name: 'TableUsuarios',
+                component: tableUsuarios,
+                meta: { requiresAuth: true },
+                roles: ['admin', 'client', 'support']
+            },
+            {
+                path: 'perfil',
+                name: 'UserPerfil',
+                component: FormPerfil,
+                meta: { requiresAuth: true }
             },
         ],
     },
@@ -55,7 +70,7 @@ const routes = [
         path: '/:pathMatch(.*)*',
         redirect: '/dashboard'
     }
-] 
+]
 
 
 const router = createRouter({

@@ -42,7 +42,7 @@ async function handleLogin() {
 }
 
 function handleGoogleLogin() {
-  window.location.href = `${import.meta.env.VITE_API_URL}/auth/google`
+  window.location.href = `${import.meta.env.VITE_BACKEND_URL}/auth/google`
 }
 
 </script>

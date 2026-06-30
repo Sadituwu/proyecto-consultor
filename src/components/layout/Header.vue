@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { User, SwitchButton, Moon, Sunny } from '@element-plus/icons-vue'
+import { User, SwitchButton, Moon, Sunny, Avatar } from '@element-plus/icons-vue'
 import { useDarkMode } from "@/composables/useDarkMode"
 import { ElMessage } from 'element-plus'
 
@@ -59,15 +59,16 @@ function handleCommand(command) {
 
       <template #dropdown>
         <el-dropdown-menu>
+          <el-dropdown-item command="profile">
+            <el-icon class="mr-1">
+              <Avatar />
+            </el-icon>
+            Mi Perfil
+          </el-dropdown-item>
           <el-dropdown-item divided>
             <div class="flex items-center gap-2">
-              <el-switch
-                v-model="isDark"
-                inline-prompt
-                :active-icon="Moon"
-                :inactive-icon="Sunny"
-                @change="toggleDarkMode"
-              />
+              <el-switch v-model="isDark" inline-prompt :active-icon="Moon" :inactive-icon="Sunny"
+                @change="toggleDarkMode" />
               <span>Modo noche</span>
             </div>
           </el-dropdown-item>
@@ -82,13 +83,8 @@ function handleCommand(command) {
       </template>
     </el-dropdown>
 
-    <el-dialog
-      v-model="logoutDialogVisible"
-      width="450px"
-      align-center
-      :close-on-click-modal="false"
-      :close-on-press-escape="false"
-    >
+    <el-dialog v-model="logoutDialogVisible" width="450px" align-center :close-on-click-modal="false"
+      :close-on-press-escape="false">
       <div class="text-center py-4">
         <div class="flex justify-center mb-4">
           <img src="@/assets/sistema/logo-sidebar.png" alt="Logout-claro" class="w-[180px] mx-auto" />
