@@ -16,6 +16,7 @@ import registro from '@/views/modelo/tablemodelo.vue'
 import Dashboard from '@/views/Dashboard.vue'
 import tableUsuarios from '@/views/administracion/tableUsuarios.vue'
 import FormPerfil from '@/views/perfil/FormPerfil.vue'
+import BuscarMentores from '@/views/mentores/BuscarMentores.vue'
 
 
 
@@ -60,6 +61,12 @@ const routes = [
                 path: 'perfil',
                 name: 'UserPerfil',
                 component: FormPerfil,
+                meta: { requiresAuth: true }
+            },
+            {
+                path: 'mentores',
+                name: 'BuscarMentores',
+                component: BuscarMentores,
                 meta: { requiresAuth: true }
             },
         ],
