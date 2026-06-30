@@ -11,13 +11,12 @@ import GoogleCallback from '@/views/auth/GoogleCallback.vue'
 /* --- Vistas privadas --- */
 
 import AuthLayout from '@/layout/AuthLayout.vue'
-import modeloias from '@/views/modelo/iaclaro.vue'
-import registro from '@/views/modelo/tablemodelo.vue'
 import Dashboard from '@/views/Dashboard.vue'
 import tableUsuarios from '@/views/administracion/tableUsuarios.vue'
 import FormPerfil from '@/views/perfil/FormPerfil.vue'
 import BuscarMentores from '@/views/mentores/BuscarMentores.vue'
 import MisSesiones from '@/views/sesiones/MisSesiones.vue'
+import MisValoraciones from '@/views/valoraciones/MisValoraciones.vue'
 
 
 
@@ -74,6 +73,12 @@ const routes = [
                 path: 'sesiones',
                 name: 'MisSesiones',
                 component: MisSesiones,
+                meta: { requiresAuth: true }
+            },
+            {
+                path: 'valoraciones',
+                name: 'MisValoraciones',
+                component: MisValoraciones,
                 meta: { requiresAuth: true }
             },
         ],
