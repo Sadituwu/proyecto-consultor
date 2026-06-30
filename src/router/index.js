@@ -17,6 +17,7 @@ import Dashboard from '@/views/Dashboard.vue'
 import tableUsuarios from '@/views/administracion/tableUsuarios.vue'
 import FormPerfil from '@/views/perfil/FormPerfil.vue'
 import BuscarMentores from '@/views/mentores/BuscarMentores.vue'
+import MisSesiones from '@/views/sesiones/MisSesiones.vue'
 
 
 
@@ -67,6 +68,12 @@ const routes = [
                 path: 'mentores',
                 name: 'BuscarMentores',
                 component: BuscarMentores,
+                meta: { requiresAuth: true }
+            },
+            {
+                path: 'sesiones',
+                name: 'MisSesiones',
+                component: MisSesiones,
                 meta: { requiresAuth: true }
             },
         ],

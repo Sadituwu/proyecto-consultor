@@ -1,8 +1,11 @@
 <script setup>
 import { ref, reactive, computed, watch, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import api from '@/services/axios'
 import { ElMessage } from 'element-plus'
-import { Search, Refresh, UserFilled, StarFilled, Timer, Filter, Close, Medal, Collection } from '@element-plus/icons-vue'
+import { Search, Refresh, UserFilled, StarFilled, Timer, Filter, Close, Medal, Collection, Calendar } from '@element-plus/icons-vue'
+
+const router = useRouter()
 
 // ── Estado principal ───────────────────────────────────────────────────
 const loading = ref(false)
@@ -370,6 +373,13 @@ onMounted(() => buscar(1))
 
       <template #footer>
         <el-button @click="detailVisible = false">Cerrar</el-button>
+        <el-button
+          type="primary"
+          :icon="Calendar"
+          @click="() => { detailVisible = false; router.push({ name: 'MisSesiones', query: { mentor_id: mentorDetalle.usuario_id } }) }"
+        >
+          Agendar sesión
+        </el-button>
       </template>
     </el-dialog>
 
