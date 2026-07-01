@@ -5,7 +5,7 @@ import api from '@/services/axios'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Calendar, Clock, Plus, WarningFilled,
-  CircleCheck, CircleClose, Tickets, Edit, InfoFilled, Checked, Finished
+  CircleCheck, CircleClose, Tickets, Edit, InfoFilled, Checked, Finished, Link
 } from '@element-plus/icons-vue'
 import { ROL } from '@/utils/roles'
 
@@ -17,15 +17,19 @@ const esMentor   = computed(() => user.rol === ROL.MENTOR)
 const esEstudiante = computed(() => user.rol === ROL.APRENDIZ)
 
 // ── Estado ─────────────────────────────────────────────────────────────
-const loadingSesiones  = ref(false)
-const loadingMentores  = ref(false)
-const guardando        = ref(false)
-const sesiones         = ref([])
-const mentores         = ref([])
-const mentoresMap      = ref({})
-const filtroEstado     = ref('todas')
-const dialogVisible    = ref(false)
-const formRef          = ref(null)
+const loadingSesiones      = ref(false)
+const loadingMentores      = ref(false)
+const guardando            = ref(false)
+const confirmando          = ref(false)
+const sesiones             = ref([])
+const mentores             = ref([])
+const mentoresMap          = ref({})
+const filtroEstado         = ref('todas')
+const dialogVisible        = ref(false)
+const dialogConfirmarVisible = ref(false)
+const sesionParaConfirmar  = ref(null)
+const linkMeetInput        = ref('')
+const formRef              = ref(null)
 
 // ── Formulario ─────────────────────────────────────────────────────────
 const form = reactive({
@@ -33,7 +37,6 @@ const form = reactive({
   fecha:         '',
   hora_inicio:   '',
   hora_fin:      '',
-  estado:        'pendiente',
   observaciones: ''
 })
 
@@ -44,11 +47,6 @@ const tabsFiltro = [
   { label: 'Confirmada', value: 'confirmada' },
   { label: 'Completada', value: 'completada' },
   { label: 'Cancelada',  value: 'cancelada'  },
-]
-
-const estadoOpciones = [
-  { label: 'Pendiente',  value: 'pendiente'  },
-  { label: 'Confirmada', value: 'confirmada' },
 ]
 
 // ── Reglas de validación ───────────────────────────────────────────────
@@ -75,9 +73,6 @@ const rules = {
       trigger: 'change'
     }
   ],
-  estado: [
-    { required: true, message: 'Selecciona el estado', trigger: 'change' }
-  ]
 }
 
 // ── Computed ───────────────────────────────────────────────────────────
@@ -148,7 +143,6 @@ function abrirDialogo() {
   form.fecha         = ''
   form.hora_inicio   = ''
   form.hora_fin      = ''
-  form.estado        = 'pendiente'
   form.observaciones = ''
   formRef.value?.resetFields()
 
@@ -179,7 +173,6 @@ async function guardarSesion() {
       fecha:         form.fecha,
       hora_inicio:   form.hora_inicio,
       hora_fin:      form.hora_fin,
-      estado:        form.estado,
       observaciones: form.observaciones || null
     })
 
@@ -188,7 +181,9 @@ async function guardarSesion() {
     cargarSesiones()
   } catch (err) {
     if (err.response?.status === 409) {
-      ElMessage.error('El mentor no está disponible en ese horario. Prueba con otro.')
+      const desde = formatHora(form.hora_inicio)
+      const hasta = formatHora(form.hora_fin)
+      ElMessage.error(`El mentor no está disponible de ${desde} a ${hasta}. Elige otro horario.`)
     } else if (err.response?.data?.errores) {
       const msg = Object.values(err.response.data.errores)[0]?.[0]
       ElMessage.error(msg || 'Error de validación')
@@ -299,27 +294,35 @@ async function completarSesion(sesion) {
   }
 }
 
-async function confirmarSesion(sesion) {
+function abrirDialogoConfirmar(sesion) {
+  sesionParaConfirmar.value = sesion
+  linkMeetInput.value       = ''
+  dialogConfirmarVisible.value = true
+}
+
+async function enviarConfirmacion() {
+  const url = linkMeetInput.value.trim()
+  if (!url) {
+    ElMessage.warning('Debes pegar el link de Google Meet antes de confirmar')
+    return
+  }
   try {
-    await ElMessageBox.confirm(
-      `¿Confirmas la sesión del ${formatFecha(sesion.fecha)} a las ${formatHora(sesion.hora_inicio)}?`,
-      'Confirmar sesión',
-      {
-        confirmButtonText: 'Sí, confirmar',
-        cancelButtonText: 'No',
-        type: 'success',
-      }
-    )
+    new URL(url)
   } catch {
+    ElMessage.error('El link ingresado no es una URL válida')
     return
   }
 
+  confirmando.value = true
   try {
-    await api.put(`/sesiones/${sesion.id}/confirmar`)
-    ElMessage.success('Sesión confirmada')
+    await api.put(`/sesiones/${sesionParaConfirmar.value.id}/confirmar`, { link_meet: url })
+    ElMessage.success('Sesión confirmada — se enviaron los recordatorios por email')
+    dialogConfirmarVisible.value = false
     cargarSesiones()
   } catch (err) {
     ElMessage.error(err.response?.data?.mensaje || 'No se pudo confirmar la sesión')
+  } finally {
+    confirmando.value = false
   }
 }
 
@@ -465,6 +468,16 @@ onMounted(async () => {
             <p v-if="sesion.observaciones" class="sesion-obs">
               {{ sesion.observaciones }}
             </p>
+            <a
+              v-if="sesion.link_meet && sesion.estado === 'confirmada'"
+              :href="sesion.link_meet"
+              target="_blank"
+              rel="noopener"
+              class="meet-link"
+            >
+              <el-icon style="font-size:13px;"><Link /></el-icon>
+              Unirse al Meet
+            </a>
           </div>
 
           <!-- Acciones -->
@@ -494,7 +507,7 @@ onMounted(async () => {
                 type="success"
                 size="small"
                 :icon="CircleCheck"
-                @click="confirmarSesion(sesion)"
+                @click="abrirDialogoConfirmar(sesion)"
               >
                 Confirmar
               </el-button>
@@ -521,6 +534,51 @@ onMounted(async () => {
         </div>
       </el-card>
     </div>
+
+    <!-- ══ DIÁLOGO: CONFIRMAR SESIÓN (MENTOR) ══════════════════════════════ -->
+    <el-dialog
+      v-model="dialogConfirmarVisible"
+      title="Confirmar sesión de mentoría"
+      width="480px"
+      align-center
+      :close-on-click-modal="false"
+      destroy-on-close
+    >
+      <div v-if="sesionParaConfirmar">
+        <p class="confirmar-info">
+          Estás a punto de confirmar la sesión del
+          <strong>{{ formatFecha(sesionParaConfirmar.fecha) }}</strong>
+          a las <strong>{{ formatHora(sesionParaConfirmar.hora_inicio) }} – {{ formatHora(sesionParaConfirmar.hora_fin) }}</strong>.
+        </p>
+        <p class="confirmar-info">
+          Para confirmar, pega el link de Google Meet que usarán durante la sesión.
+          Se enviará automáticamente al aprendiz y a ti por correo.
+        </p>
+        <el-form label-position="top" style="margin-top:16px;">
+          <el-form-item label="Link de Google Meet">
+            <el-input
+              v-model="linkMeetInput"
+              :prefix-icon="Link"
+              placeholder="https://meet.google.com/xxx-xxxx-xxx"
+              clearable
+            />
+          </el-form-item>
+        </el-form>
+      </div>
+      <template #footer>
+        <el-button @click="dialogConfirmarVisible = false" :disabled="confirmando">
+          Cancelar
+        </el-button>
+        <el-button
+          type="success"
+          :loading="confirmando"
+          :icon="CircleCheck"
+          @click="enviarConfirmacion"
+        >
+          Confirmar sesión
+        </el-button>
+      </template>
+    </el-dialog>
 
     <!-- ══ DIÁLOGO: AGENDAR SESIÓN ════════════════════════════════════════ -->
     <el-dialog
@@ -599,21 +657,6 @@ onMounted(async () => {
             </el-form-item>
           </el-col>
         </el-row>
-
-        <!-- Estado -->
-        <el-form-item label="Estado inicial" prop="estado">
-          <el-select v-model="form.estado" class="w-full">
-            <el-option
-              v-for="op in estadoOpciones"
-              :key="op.value"
-              :label="op.label"
-              :value="op.value"
-            />
-          </el-select>
-          <div class="field-hint">
-            Selecciona "Pendiente" si aún necesita confirmar con el mentor.
-          </div>
-        </el-form-item>
 
         <!-- Observaciones -->
         <el-form-item label="Observaciones" prop="observaciones">
@@ -903,6 +946,33 @@ onMounted(async () => {
 .mentor-option__carrera {
   font-size: 0.75rem;
   color: var(--el-text-color-secondary);
+}
+
+/* ── Meet link ───────────────────────────────────────────────────────── */
+.meet-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  color: #1a73e8;
+  background: #e8f0fe;
+  border-radius: 6px;
+  padding: 0.2rem 0.5rem;
+  font-weight: 600;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.meet-link:hover {
+  background: #d2e3fc;
+}
+
+/* ── Confirmar diálogo ───────────────────────────────────────────────── */
+.confirmar-info {
+  margin: 0 0 0.75rem;
+  font-size: 0.875rem;
+  color: var(--el-text-color-secondary);
+  line-height: 1.5;
 }
 
 /* ── Google Calendar badge ───────────────────────────────────────────── */
