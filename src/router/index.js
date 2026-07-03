@@ -15,8 +15,10 @@ import SeleccionarRol from '@/views/auth/SeleccionarRol.vue'
 import AuthLayout from '@/layout/AuthLayout.vue'
 import Dashboard from '@/views/Dashboard.vue'
 import tableUsuarios from '@/views/administracion/tableUsuarios.vue'
+import AreasInteres from '@/views/administracion/AreasInteres.vue'
 import FormPerfil from '@/views/perfil/FormPerfil.vue'
 import BuscarMentores from '@/views/mentores/BuscarMentores.vue'
+import PerfilMentorPublico from '@/views/mentores/PerfilMentorPublico.vue'
 import MisSesiones from '@/views/sesiones/MisSesiones.vue'
 import MisValoraciones from '@/views/valoraciones/MisValoraciones.vue'
 
@@ -59,6 +61,12 @@ const routes = [
                 meta: { requiresAuth: true, roles: [ROL.ADMIN] },
             },
             {
+                path: 'areas-interes',
+                name: 'AreasInteres',
+                component: AreasInteres,
+                meta: { requiresAuth: true, roles: [ROL.ADMIN] },
+            },
+            {
                 path: 'perfil',
                 name: 'UserPerfil',
                 component: FormPerfil,
@@ -68,6 +76,12 @@ const routes = [
                 path: 'mentores',
                 name: 'BuscarMentores',
                 component: BuscarMentores,
+                meta: { requiresAuth: true, roles: [ROL.APRENDIZ, ROL.ADMIN] },
+            },
+            {
+                path: 'mentores/:id',
+                name: 'PerfilMentorPublico',
+                component: PerfilMentorPublico,
                 meta: { requiresAuth: true, roles: [ROL.APRENDIZ, ROL.ADMIN] },
             },
             {

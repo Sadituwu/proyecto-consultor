@@ -1,4 +1,4 @@
-import { DataAnalysis, Avatar, Medal, Calendar, Trophy, User } from '@element-plus/icons-vue'
+import { DataAnalysis, Avatar, Medal, Calendar, Trophy, User, Collection, Setting } from '@element-plus/icons-vue'
 import { ROL } from '@/utils/roles'
 
 export const menuItems = [
@@ -33,10 +33,21 @@ export const menuItems = [
     roles:     [ROL.APRENDIZ, ROL.MENTOR, ROL.ADMIN],
   },
   {
-    title:     'Usuarios',
-    icon:      User,
-    routeName: '/usuarios',
-    roles:     [ROL.ADMIN],
+    title: 'Administración',
+    icon:  Setting,
+    roles: [ROL.ADMIN],
+    children: [
+      {
+        title:     'Usuarios',
+        icon:      User,
+        routeName: '/usuarios',
+      },
+      {
+        title:     'Áreas de Interés',
+        icon:      Collection,
+        routeName: '/areas-interes',
+      },
+    ],
   },
 ]
 

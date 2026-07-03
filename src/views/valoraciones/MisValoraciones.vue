@@ -118,7 +118,7 @@ const distribucion = computed(() => {
 async function cargarSesiones() {
   loadingSesiones.value = true
   try {
-    const { data } = await api.get('/sesiones')
+    const { data } = await api.get('/sesiones', { params: { todas: 1 } })
     sesiones.value = Array.isArray(data) ? data : []
   } catch {
     ElMessage.error('Error al cargar las sesiones')

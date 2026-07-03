@@ -3,7 +3,7 @@ import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/services/axios'
 import { ElMessage } from 'element-plus'
-import { Search, Refresh, UserFilled, StarFilled, Timer, Filter, Close, Medal, Collection, Calendar } from '@element-plus/icons-vue'
+import { Search, Refresh, UserFilled, StarFilled, Timer, Filter, Close, Medal, Collection } from '@element-plus/icons-vue'
 
 const router = useRouter()
 
@@ -13,9 +13,6 @@ const mentores = ref([])
 const total = ref(0)
 const paginaActual = ref(1)
 const POR_PAGINA = 5
-
-const detailVisible = ref(false)
-const mentorDetalle = ref(null)
 
 let debounceTimer = null
 
@@ -118,8 +115,7 @@ function getRatingDisplay(val) {
 }
 
 function verDetalle(mentor) {
-  mentorDetalle.value = mentor
-  detailVisible.value = true
+  router.push({ name: 'PerfilMentorPublico', params: { id: mentor.usuario_id } })
 }
 
 // ── Watchers ───────────────────────────────────────────────────────────
@@ -307,81 +303,6 @@ onMounted(() => buscar(1))
           layout="prev, pager, next, jumper" background @current-change="cambiarPagina" />
       </div>
     </template>
-
-    <!-- ══ MODAL DETALLE ═════════════════════════════════════════════════ -->
-    <el-dialog v-model="detailVisible" :title="mentorDetalle?.usuario?.nombre" width="600px" align-center
-      destroy-on-close>
-      <div v-if="mentorDetalle" class="detalle-contenido">
-
-        <!-- Avatar + info básica -->
-        <div class="detalle-header">
-          <el-avatar :size="80" :src="mentorDetalle.foto_url || ''" class="detalle-avatar">
-            {{ getLetra(mentorDetalle.usuario?.nombre) }}
-          </el-avatar>
-          <div>
-            <h3 class="detalle-nombre">{{ mentorDetalle.usuario?.nombre }}</h3>
-            <p class="detalle-email">{{ mentorDetalle.usuario?.email }}</p>
-            <div class="mentor-rating mt-1">
-              <el-rate :model-value="getRating(mentorDetalle.valoraciones_avg_calificacion)" disabled show-score
-                :score-template="getRatingDisplay(mentorDetalle.valoraciones_avg_calificacion)
-                  ? `${getRatingDisplay(mentorDetalle.valoraciones_avg_calificacion)} / 5.0`
-                  : 'Sin valoraciones'" />
-            </div>
-          </div>
-        </div>
-
-        <el-divider />
-
-        <!-- Carrera y ciclo -->
-        <div class="detalle-seccion">
-          <p class="detalle-seccion__label">Carrera / Área</p>
-          <div class="flex gap-2 flex-wrap">
-            <el-tag type="primary" effect="light">{{ mentorDetalle.carrera }}</el-tag>
-            <el-tag type="info" effect="plain">Ciclo {{ mentorDetalle.ciclo }}</el-tag>
-          </div>
-        </div>
-
-        <!-- Bio completa -->
-        <div class="detalle-seccion">
-          <p class="detalle-seccion__label">Descripción profesional</p>
-          <p class="detalle-bio">{{ mentorDetalle.bio }}</p>
-        </div>
-
-        <!-- Habilidades completas -->
-        <div v-if="getHabilidades(mentorDetalle.habilidades).length" class="detalle-seccion">
-          <p class="detalle-seccion__label">Especialidades y habilidades</p>
-          <div class="flex flex-wrap gap-2">
-            <el-tag v-for="h in getHabilidades(mentorDetalle.habilidades)" :key="h" type="success" effect="light"
-              size="small">
-              {{ h }}
-            </el-tag>
-          </div>
-        </div>
-
-        <!-- Disponibilidad completa -->
-        <div v-if="getDisponibilidad(mentorDetalle.disponibilidad).length" class="detalle-seccion">
-          <p class="detalle-seccion__label">Disponibilidad</p>
-          <div class="flex flex-wrap gap-2">
-            <el-tag v-for="d in getDisponibilidad(mentorDetalle.disponibilidad)" :key="d" type="warning" effect="light"
-              size="small" :icon="Timer">
-              {{ d }}
-            </el-tag>
-          </div>
-        </div>
-
-      </div>
-
-      <template #footer>
-        <el-button @click="detailVisible = false">Cerrar</el-button>
-        <el-button
-          type="primary"
-          :icon="Calendar"
-          @click="() => { detailVisible = false; router.push({ name: 'MisSesiones', query: { mentor_id: mentorDetalle.usuario_id } }) }"
-        >
-          Agendar sesión
-        </el-button>
-      </template>
-    </el-dialog>
 
   </div>
 </template>
@@ -655,75 +576,6 @@ onMounted(() => buscar(1))
   max-width: 360px;
   margin-inline: auto;
   line-height: 1.5;
-}
-
-/* ── Modal detalle ───────────────────────────────────────────────────── */
-.detalle-contenido {
-  padding: 0 0.25rem;
-}
-
-.detalle-header {
-  display: flex;
-  gap: 1.25rem;
-  align-items: flex-start;
-  margin-bottom: 0.25rem;
-}
-
-.detalle-avatar {
-  flex-shrink: 0;
-  font-size: 1.75rem;
-  font-weight: 700;
-  background-color: var(--el-color-primary);
-  color: #fff;
-}
-
-.detalle-nombre {
-  margin: 0 0 0.2rem;
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: var(--el-text-color-primary);
-}
-
-.detalle-email {
-  margin: 0;
-  font-size: 0.85rem;
-  color: var(--el-text-color-secondary);
-}
-
-.detalle-seccion {
-  margin-bottom: 1.1rem;
-}
-
-.detalle-seccion__label {
-  font-size: 0.78rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--el-text-color-secondary);
-  margin: 0 0 0.5rem;
-}
-
-.detalle-bio {
-  font-size: 0.9rem;
-  color: var(--el-text-color-regular);
-  line-height: 1.65;
-  margin: 0;
-}
-
-.mt-1 {
-  margin-top: 0.25rem;
-}
-
-.flex {
-  display: flex;
-}
-
-.flex-wrap {
-  flex-wrap: wrap;
-}
-
-.gap-2 {
-  gap: 0.5rem;
 }
 
 .w-full {

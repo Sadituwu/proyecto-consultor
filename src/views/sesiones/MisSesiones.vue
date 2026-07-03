@@ -5,7 +5,7 @@ import api from '@/services/axios'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Calendar, Clock, Plus, WarningFilled,
-  CircleCheck, CircleClose, Tickets, Edit, InfoFilled, Checked, Finished, Link
+  CircleCheck, CircleClose, Tickets, Edit, InfoFilled, Checked, Finished, Link, View
 } from '@element-plus/icons-vue'
 import { ROL } from '@/utils/roles'
 
@@ -30,6 +30,18 @@ const dialogConfirmarVisible = ref(false)
 const sesionParaConfirmar  = ref(null)
 const linkMeetInput        = ref('')
 const formRef              = ref(null)
+const dialogCancelarVisible = ref(false)
+const sesionParaCancelar   = ref(null)
+const motivoCancelacion    = ref('')
+const cancelando           = ref(false)
+const dialogDetalleVisible = ref(false)
+const sesionDetalle        = ref(null)
+
+// ── Paginación ─────────────────────────────────────────────────────────
+const paginaActual = ref(1)
+const totalSesiones = ref(0)
+const porPagina     = ref(10)
+const contadores = reactive({ todas: 0, pendiente: 0, confirmada: 0, completada: 0, cancelada: 0 })
 
 // ── Formulario ─────────────────────────────────────────────────────────
 const form = reactive({
@@ -76,26 +88,6 @@ const rules = {
 }
 
 // ── Computed ───────────────────────────────────────────────────────────
-const sesionesDelUsuario = computed(() =>
-  sesiones.value.filter(s =>
-    s.aprendiz_id === user.id || s.mentor_id === user.id
-  )
-)
-
-const sesionesFiltradas = computed(() => {
-  const todas = sesionesDelUsuario.value
-  if (filtroEstado.value === 'todas') return todas
-  return todas.filter(s => s.estado === filtroEstado.value)
-})
-
-const contadorPorEstado = computed(() => {
-  const counts = { todas: sesionesDelUsuario.value.length }
-  for (const tab of tabsFiltro.slice(1)) {
-    counts[tab.value] = sesionesDelUsuario.value.filter(s => s.estado === tab.value).length
-  }
-  return counts
-})
-
 const fechaMinima = computed(() => {
   const hoy = new Date()
   hoy.setHours(0, 0, 0, 0)
@@ -106,13 +98,38 @@ const fechaMinima = computed(() => {
 async function cargarSesiones() {
   loadingSesiones.value = true
   try {
-    const { data } = await api.get('/sesiones')
-    sesiones.value = Array.isArray(data) ? data : []
+    const { data } = await api.get('/sesiones', {
+      params: {
+        page:   paginaActual.value,
+        estado: filtroEstado.value !== 'todas' ? filtroEstado.value : undefined
+      }
+    })
+    sesiones.value      = Array.isArray(data.data) ? data.data : []
+    totalSesiones.value = data.total ?? 0
+    porPagina.value     = data.per_page ?? porPagina.value
+    Object.assign(contadores, data.contadores || {})
+
+    // Si la página quedó vacía tras cancelar/completar el último ítem, retrocede una página
+    if (sesiones.value.length === 0 && paginaActual.value > 1 && totalSesiones.value > 0) {
+      paginaActual.value--
+      await cargarSesiones()
+    }
   } catch {
     ElMessage.error('Error al cargar las sesiones')
   } finally {
     loadingSesiones.value = false
   }
+}
+
+function cambiarFiltro(valor) {
+  filtroEstado.value = valor
+  paginaActual.value = 1
+  cargarSesiones()
+}
+
+function cambiarPagina(pagina) {
+  paginaActual.value = pagina
+  cargarSesiones()
 }
 
 async function cargarMentores() {
@@ -196,28 +213,29 @@ async function guardarSesion() {
 }
 
 // ── Cancelar sesión ────────────────────────────────────────────────────
-async function cancelarSesion(sesion) {
-  try {
-    await ElMessageBox.confirm(
-      `¿Seguro que deseas cancelar la sesión del ${formatFecha(sesion.fecha)} a las ${formatHora(sesion.hora_inicio)}?`,
-      'Cancelar sesión',
-      {
-        confirmButtonText: 'Sí, cancelar',
-        cancelButtonText: 'No',
-        type: 'warning',
-        confirmButtonClass: 'el-button--danger'
-      }
-    )
-  } catch {
+function abrirDialogoCancelar(sesion) {
+  sesionParaCancelar.value = sesion
+  motivoCancelacion.value  = ''
+  dialogCancelarVisible.value = true
+}
+
+async function enviarCancelacion() {
+  const motivo = motivoCancelacion.value.trim()
+  if (!motivo) {
+    ElMessage.warning('Debes indicar el motivo de la cancelación')
     return
   }
 
+  cancelando.value = true
   try {
-    await api.put(`/sesiones/${sesion.id}/cancelar`)
+    await api.put(`/sesiones/${sesionParaCancelar.value.id}/cancelar`, { motivo })
     ElMessage.success('Sesión cancelada')
+    dialogCancelarVisible.value = false
     cargarSesiones()
-  } catch {
-    ElMessage.error('No se pudo cancelar la sesión')
+  } catch (err) {
+    ElMessage.error(err.response?.data?.mensaje || 'No se pudo cancelar la sesión')
+  } finally {
+    cancelando.value = false
   }
 }
 
@@ -268,6 +286,15 @@ function puedeCompletar(sesion) {
 
 function esMiSesionComoMentor(sesion) {
   return sesion.mentor_id === user.id
+}
+
+function abrirDetalle(sesion) {
+  sesionDetalle.value = sesion
+  dialogDetalleVisible.value = true
+}
+
+function estadoLabel(estado) {
+  return estado ? estado.charAt(0).toUpperCase() + estado.slice(1) : ''
 }
 
 async function completarSesion(sesion) {
@@ -364,10 +391,10 @@ onMounted(async () => {
         :key="tab.value"
         class="tab-btn"
         :class="{ 'tab-btn--active': filtroEstado === tab.value }"
-        @click="filtroEstado = tab.value"
+        @click="cambiarFiltro(tab.value)"
       >
         {{ tab.label }}
-        <span class="tab-count">{{ contadorPorEstado[tab.value] }}</span>
+        <span class="tab-count">{{ contadores[tab.value] }}</span>
       </button>
     </div>
 
@@ -379,7 +406,7 @@ onMounted(async () => {
     </div>
 
     <!-- ══ ESTADO VACÍO ══════════════════════════════════════════════════ -->
-    <div v-else-if="sesionesFiltradas.length === 0" class="empty-state">
+    <div v-else-if="sesiones.length === 0" class="empty-state">
       <el-empty :image-size="120">
         <template #description>
           <p class="empty-title">
@@ -402,7 +429,7 @@ onMounted(async () => {
     <!-- ══ LISTA DE SESIONES ═════════════════════════════════════════════ -->
     <div v-else class="sesiones-lista">
       <el-card
-        v-for="sesion in sesionesFiltradas"
+        v-for="sesion in sesiones"
         :key="sesion.id"
         shadow="never"
         class="sesion-card"
@@ -451,7 +478,7 @@ onMounted(async () => {
               {{ sesion.estado.charAt(0).toUpperCase() + sesion.estado.slice(1) }}
             </el-tag>
             <el-tooltip
-              v-if="sesion.google_calendar_event_id"
+              v-if="sesion.google_calendar_event_id || sesion.google_calendar_event_id_mentor"
               content="Evento sincronizado con Google Calendar"
               placement="top"
             >
@@ -468,6 +495,9 @@ onMounted(async () => {
             <p v-if="sesion.observaciones" class="sesion-obs">
               {{ sesion.observaciones }}
             </p>
+            <p v-if="sesion.estado === 'cancelada' && sesion.motivo_cancelacion" class="sesion-motivo">
+              Motivo: {{ sesion.motivo_cancelacion }}
+            </p>
             <a
               v-if="sesion.link_meet && sesion.estado === 'confirmada'"
               :href="sesion.link_meet"
@@ -482,6 +512,17 @@ onMounted(async () => {
 
           <!-- Acciones -->
           <div class="sesion-acciones">
+
+            <el-tooltip content="Ver detalle de la sesión" placement="top">
+              <el-button
+                plain
+                size="small"
+                :icon="View"
+                @click="abrirDetalle(sesion)"
+              >
+                Detalle
+              </el-button>
+            </el-tooltip>
 
             <el-tooltip
               v-if="puedeCompletar(sesion)"
@@ -523,7 +564,7 @@ onMounted(async () => {
                 plain
                 size="small"
                 :icon="CircleClose"
-                @click="cancelarSesion(sesion)"
+                @click="abrirDialogoCancelar(sesion)"
               >
                 Cancelar
               </el-button>
@@ -533,6 +574,17 @@ onMounted(async () => {
 
         </div>
       </el-card>
+    </div>
+
+    <!-- ══ PAGINACIÓN ════════════════════════════════════════════════════ -->
+    <div v-if="!loadingSesiones && totalSesiones > porPagina" class="sesiones-paginacion">
+      <el-pagination
+        layout="prev, pager, next"
+        :current-page="paginaActual"
+        :page-size="porPagina"
+        :total="totalSesiones"
+        @current-change="cambiarPagina"
+      />
     </div>
 
     <!-- ══ DIÁLOGO: CONFIRMAR SESIÓN (MENTOR) ══════════════════════════════ -->
@@ -577,6 +629,150 @@ onMounted(async () => {
         >
           Confirmar sesión
         </el-button>
+      </template>
+    </el-dialog>
+
+    <!-- ══ DIÁLOGO: CANCELAR SESIÓN ═════════════════════════════════════════ -->
+    <el-dialog
+      v-model="dialogCancelarVisible"
+      title="Cancelar sesión"
+      width="480px"
+      align-center
+      :close-on-click-modal="false"
+      destroy-on-close
+    >
+      <div v-if="sesionParaCancelar">
+        <p class="confirmar-info">
+          Estás a punto de cancelar la sesión del
+          <strong>{{ formatFecha(sesionParaCancelar.fecha) }}</strong>
+          a las <strong>{{ formatHora(sesionParaCancelar.hora_inicio) }} – {{ formatHora(sesionParaCancelar.hora_fin) }}</strong>.
+        </p>
+        <p class="confirmar-info">
+          Indica el motivo de la cancelación. Se enviará por correo a ambas partes.
+        </p>
+        <el-form label-position="top" style="margin-top:16px;">
+          <el-form-item label="Motivo de cancelación">
+            <el-input
+              v-model="motivoCancelacion"
+              type="textarea"
+              :rows="3"
+              maxlength="500"
+              show-word-limit
+              placeholder="Ej: Surgió un imprevisto y no podré asistir a la sesión..."
+              resize="none"
+            />
+          </el-form-item>
+        </el-form>
+      </div>
+      <template #footer>
+        <el-button @click="dialogCancelarVisible = false" :disabled="cancelando">
+          Volver
+        </el-button>
+        <el-button
+          type="danger"
+          :loading="cancelando"
+          :icon="CircleClose"
+          @click="enviarCancelacion"
+        >
+          Cancelar sesión
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <!-- ══ MODAL: DETALLE DE LA SESIÓN ══════════════════════════════════════ -->
+    <el-dialog
+      v-model="dialogDetalleVisible"
+      title="Detalle de la sesión"
+      width="520px"
+      align-center
+      destroy-on-close
+    >
+      <div v-if="sesionDetalle" class="detalle-contenido">
+
+        <!-- Estado + ID -->
+        <div class="detalle-top">
+          <el-tag
+            :type="getTagType(sesionDetalle.estado)"
+            :icon="getTagIcon(sesionDetalle.estado)"
+            effect="light"
+          >
+            {{ estadoLabel(sesionDetalle.estado) }}
+          </el-tag>
+          <span class="detalle-id">Sesión #{{ sesionDetalle.id }}</span>
+        </div>
+
+        <!-- Fecha y hora -->
+        <div class="detalle-fila">
+          <el-icon><Calendar /></el-icon>
+          <span>{{ formatFecha(sesionDetalle.fecha) }}</span>
+          <el-icon class="ml-1"><Clock /></el-icon>
+          <span>{{ formatHora(sesionDetalle.hora_inicio) }} – {{ formatHora(sesionDetalle.hora_fin) }}</span>
+        </div>
+
+        <el-divider />
+
+        <!-- Mentor -->
+        <div class="detalle-seccion">
+          <p class="detalle-seccion__label">Mentor</p>
+          <div class="detalle-mentor">
+            <el-avatar :size="36" class="sesion-avatar">
+              {{ getLetraMentor(sesionDetalle.mentor_id) }}
+            </el-avatar>
+            <div>
+              <p class="detalle-mentor__nombre">
+                {{ getNombreMentor(sesionDetalle.mentor_id) }}
+                <el-tag v-if="esMiSesionComoMentor(sesionDetalle)" size="small" type="primary" effect="plain">
+                  Tú (mentor)
+                </el-tag>
+              </p>
+              <p v-if="getCarreraMentor(sesionDetalle.mentor_id)" class="detalle-mentor__carrera">
+                {{ getCarreraMentor(sesionDetalle.mentor_id) }}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Observaciones -->
+        <div v-if="sesionDetalle.observaciones" class="detalle-seccion">
+          <p class="detalle-seccion__label">Observaciones</p>
+          <p class="detalle-texto">{{ sesionDetalle.observaciones }}</p>
+        </div>
+
+        <!-- Link de Meet -->
+        <div v-if="sesionDetalle.link_meet" class="detalle-seccion">
+          <p class="detalle-seccion__label">Link de la sesión</p>
+          <a :href="sesionDetalle.link_meet" target="_blank" rel="noopener" class="meet-link">
+            <el-icon style="font-size:13px;"><Link /></el-icon>
+            {{ sesionDetalle.link_meet }}
+          </a>
+        </div>
+
+        <!-- Motivo de cancelación -->
+        <div v-if="sesionDetalle.estado === 'cancelada' && sesionDetalle.motivo_cancelacion" class="detalle-seccion">
+          <p class="detalle-seccion__label">Motivo de cancelación</p>
+          <p class="detalle-texto detalle-texto--danger">{{ sesionDetalle.motivo_cancelacion }}</p>
+        </div>
+
+        <!-- Google Calendar -->
+        <div
+          v-if="sesionDetalle.google_calendar_event_id || sesionDetalle.google_calendar_event_id_mentor"
+          class="detalle-seccion"
+        >
+          <p class="detalle-seccion__label">Google Calendar</p>
+          <span class="gcal-badge">
+            <img
+              src="https://ssl.gstatic.com/calendar/images/dynamiclogo_2020q4/calendar_16_2x.png"
+              alt="Google Calendar"
+              width="14"
+              height="14"
+            />
+            Evento sincronizado
+          </span>
+        </div>
+
+      </div>
+      <template #footer>
+        <el-button @click="dialogDetalleVisible = false">Cerrar</el-button>
       </template>
     </el-dialog>
 
@@ -796,6 +992,13 @@ onMounted(async () => {
   gap: 0.875rem;
 }
 
+/* ── Paginación ──────────────────────────────────────────────────────── */
+.sesiones-paginacion {
+  display: flex;
+  justify-content: center;
+  margin-top: 1.5rem;
+}
+
 /* ── Tarjeta de sesión ───────────────────────────────────────────────── */
 .sesion-card {
   border-radius: 12px !important;
@@ -888,6 +1091,16 @@ onMounted(async () => {
   margin: 0;
   font-size: 0.75rem;
   color: var(--el-text-color-secondary);
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sesion-motivo {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--el-color-danger);
   max-width: 180px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -987,6 +1200,83 @@ onMounted(async () => {
   padding: 0.2rem 0.5rem;
   font-weight: 600;
   white-space: nowrap;
+}
+
+/* ── Modal detalle ───────────────────────────────────────────────────── */
+.detalle-contenido {
+  padding: 0 0.25rem;
+}
+
+.detalle-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.875rem;
+}
+
+.detalle-id {
+  font-size: 0.78rem;
+  color: var(--el-text-color-placeholder);
+}
+
+.detalle-fila {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  color: var(--el-text-color-primary);
+}
+
+.ml-1 {
+  margin-left: 0.75rem;
+}
+
+.detalle-seccion {
+  margin-bottom: 1.1rem;
+}
+
+.detalle-seccion__label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--el-text-color-secondary);
+  margin: 0 0 0.5rem;
+}
+
+.detalle-mentor {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.detalle-mentor__nombre {
+  margin: 0 0 0.1rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--el-text-color-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.detalle-mentor__carrera {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--el-text-color-secondary);
+}
+
+.detalle-texto {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--el-text-color-regular);
+  line-height: 1.55;
+  white-space: pre-line;
+}
+
+.detalle-texto--danger {
+  color: var(--el-color-danger);
 }
 
 @media (max-width: 500px) {

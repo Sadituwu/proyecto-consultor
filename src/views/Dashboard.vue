@@ -99,7 +99,7 @@ const stats = computed(() => {
         icon:  StarFilled,
         color: '#f7ba2a',
         bg:    '#fefbe8',
-        route: 'MisSesiones'
+        route: 'MisValoraciones'
       },
     ]
   }
@@ -230,7 +230,7 @@ const accesos = computed(() => {
 // ── Fetch data ─────────────────────────────────────────────────────────
 async function fetchSesiones() {
   try {
-    const { data } = await api.get('/sesiones')
+    const { data } = await api.get('/sesiones', { params: { todas: 1 } })
     sesiones.value = Array.isArray(data) ? data : []
 
     const { data: perfiles } = await api.get('/perfiles', {

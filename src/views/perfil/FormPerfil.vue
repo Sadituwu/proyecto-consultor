@@ -31,14 +31,17 @@ const disponibilidadOpciones = [
   'Fines de semana'
 ]
 
-// ── Sugerencias de habilidades ─────────────────────────────────────────
-const habilidadesSugeridas = [
-  'JavaScript', 'TypeScript', 'Vue.js', 'React', 'Angular',
-  'Node.js', 'Laravel', 'PHP', 'Python', 'Java',
-  'SQL', 'MySQL', 'PostgreSQL', 'MongoDB',
-  'Docker', 'Git', 'AWS', 'Linux',
-  'Diseño UI/UX', 'Figma', 'Machine Learning'
-]
+// ── Áreas de interés / habilidades (catálogo administrado por el admin) ─
+const habilidadesSugeridas = ref([])
+
+async function cargarAreasInteres() {
+  try {
+    const { data } = await api.get('/areas-interes')
+    habilidadesSugeridas.value = Array.isArray(data) ? data.map(a => a.nombre) : []
+  } catch {
+    // No crítico — el select sigue funcionando en modo libre (allow-create)
+  }
+}
 
 // ── Formulario reactivo ────────────────────────────────────────────────
 const form = reactive({
@@ -94,6 +97,8 @@ watch(() => form.foto_url, () => { avatarError.value = false })
 
 // ── Cargar perfil existente ────────────────────────────────────────────
 onMounted(async () => {
+  cargarAreasInteres()
+
   try {
     const { data } = await api.get(`/perfiles/${user.id}`)
     tienePerfilExistente.value = true
@@ -225,11 +230,6 @@ function limpiarFormulario() {
                 <el-tag size="small" type="primary">{{ rolLabel }}</el-tag>
               </div>
             </div>
-
-            <el-form-item label="URL de foto de perfil" prop="foto_url" class="mt-4">
-              <el-input v-model="form.foto_url" placeholder="https://ejemplo.com/mi-foto.jpg" clearable disabled
-                :prefix-icon="Picture" />
-            </el-form-item>
           </el-card>
 
           <!-- ── Disponibilidad (solo mentores) ──────────────────── -->
