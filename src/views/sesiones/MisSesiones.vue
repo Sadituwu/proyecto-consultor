@@ -263,6 +263,19 @@ function getLetraMentor(mentor_id) {
   return getNombreMentor(mentor_id).charAt(0).toUpperCase()
 }
 
+// Persona a mostrar en la tarjeta/modal según quién mira la sesión:
+// al aprendiz le interesa ver a su mentor, al mentor le interesa ver a su aprendiz.
+function getNombreContraparte(sesion) {
+  if (esMentor.value) {
+    return sesion.aprendiz?.nombre || `Aprendiz #${sesion.aprendiz_id}`
+  }
+  return sesion.mentor?.nombre || getNombreMentor(sesion.mentor_id)
+}
+
+function getLetraContraparte(sesion) {
+  return getNombreContraparte(sesion).charAt(0).toUpperCase()
+}
+
 function getTagType(estado) {
   return { pendiente: 'warning', confirmada: 'primary', completada: 'success', cancelada: 'info' }[estado] || 'info'
 }
@@ -282,10 +295,6 @@ function puedeConfirmar(sesion) {
 
 function puedeCompletar(sesion) {
   return sesion.estado === 'confirmada' && sesion.mentor_id === user.id
-}
-
-function esMiSesionComoMentor(sesion) {
-  return sesion.mentor_id === user.id
 }
 
 function abrirDetalle(sesion) {
@@ -448,19 +457,19 @@ onMounted(async () => {
             </div>
           </div>
 
-          <!-- Columna mentor -->
+          <!-- Columna contraparte (mentor visto por el aprendiz, o aprendiz visto por el mentor) -->
           <div class="sesion-mentor-col">
             <el-avatar :size="40" class="sesion-avatar">
-              {{ getLetraMentor(sesion.mentor_id) }}
+              {{ getLetraContraparte(sesion) }}
             </el-avatar>
             <div class="sesion-mentor-info">
               <p class="sesion-mentor-nombre">
-                {{ getNombreMentor(sesion.mentor_id) }}
-                <el-tag v-if="esMiSesionComoMentor(sesion)" size="small" type="primary" effect="plain">
-                  Tú (mentor)
+                {{ getNombreContraparte(sesion) }}
+                <el-tag size="small" type="info" effect="plain">
+                  {{ esMentor ? 'Aprendiz' : 'Mentor' }}
                 </el-tag>
               </p>
-              <p v-if="getCarreraMentor(sesion.mentor_id)" class="sesion-mentor-carrera">
+              <p v-if="!esMentor && getCarreraMentor(sesion.mentor_id)" class="sesion-mentor-carrera">
                 {{ getCarreraMentor(sesion.mentor_id) }}
               </p>
             </div>
@@ -711,21 +720,18 @@ onMounted(async () => {
 
         <el-divider />
 
-        <!-- Mentor -->
+        <!-- Contraparte (mentor visto por el aprendiz, o aprendiz visto por el mentor) -->
         <div class="detalle-seccion">
-          <p class="detalle-seccion__label">Mentor</p>
+          <p class="detalle-seccion__label">{{ esMentor ? 'Aprendiz' : 'Mentor' }}</p>
           <div class="detalle-mentor">
             <el-avatar :size="36" class="sesion-avatar">
-              {{ getLetraMentor(sesionDetalle.mentor_id) }}
+              {{ getLetraContraparte(sesionDetalle) }}
             </el-avatar>
             <div>
               <p class="detalle-mentor__nombre">
-                {{ getNombreMentor(sesionDetalle.mentor_id) }}
-                <el-tag v-if="esMiSesionComoMentor(sesionDetalle)" size="small" type="primary" effect="plain">
-                  Tú (mentor)
-                </el-tag>
+                {{ getNombreContraparte(sesionDetalle) }}
               </p>
-              <p v-if="getCarreraMentor(sesionDetalle.mentor_id)" class="detalle-mentor__carrera">
+              <p v-if="!esMentor && getCarreraMentor(sesionDetalle.mentor_id)" class="detalle-mentor__carrera">
                 {{ getCarreraMentor(sesionDetalle.mentor_id) }}
               </p>
             </div>
