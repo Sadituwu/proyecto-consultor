@@ -16,7 +16,7 @@ function handleGoogleLogin() {
         <p>Accede a mentores 24/7.</p>
       </div>
     </div>
-    <!-- Panel formulario -->
+    <!-- Panel formulario  -->
     <div class="login-panel">
       <el-card class="login-card" shadow="never">
         <div class="login-card__header">
